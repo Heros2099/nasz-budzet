@@ -89,6 +89,7 @@ export async function api(path, data) {
     return summarize(snapshot.entries || [], snapshot.rules || [], month);
   }
   if (path === 'entry') return rest('budget_entries', { method: 'POST', prefer: 'resolution=ignore-duplicates', body: { ...data, id: data.id || crypto.randomUUID() } });
+  if (path === 'import-entries') return rest('budget_entries', { method: 'POST', prefer: 'resolution=ignore-duplicates', body: data });
   if (path === 'rule') return rest('budget_rules', { method: 'POST', prefer: 'resolution=ignore-duplicates', body: { ...data, id: data.id || crypto.randomUUID(), start: monthStart(data.start) } });
   if (path === 'delete-entry') return rest('budget_entries?id=eq.' + encodeURIComponent(data.id), { method: 'DELETE' });
   if (path === 'stop-rule') return rest('rpc/budget_stop_rule', { method: 'POST', body: { rule: data.id, from_month: monthStart(data.month) } });
