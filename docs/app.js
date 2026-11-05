@@ -1,4 +1,4 @@
-import { api, login, logout, hasSession, configured, friendlyError } from './cloud.js';
+import { api, login, logout, hasSession, configured, friendlyError } from './cloud.js?v=e5d292f';
 import { parseAmount } from './budget.js';
 import { readIngScreenshot } from './ing.js';
 const $=s=>document.querySelector(s), money=n=>new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(n/100);
