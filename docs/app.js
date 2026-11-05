@@ -1,3 +1,4 @@
+import { initExpenseFilter, filterExpenses, resetExpenseFilter } from './category-filter.js';
 import { initSettings, entryCategories } from './settings.js?v=settings1';
 import { api, login, logout, hasSession, configured, friendlyError, accountId } from './cloud.js?v=settings1';
 import { parseAmount } from './budget.js';
@@ -9,7 +10,8 @@ $('#month').value=localDate().slice(0,7);
 initSettings([...$('#entryForm select[name="category"]').options].map(option => option.value), accountId);
 
 function toast(t){$('#toast').textContent=t;$('#toast').hidden=false;setTimeout(()=>$('#toast').hidden=true,4000)}
-function showLogin() {epoch++; state=null; $('#login').hidden=false; $('#app').hidden=true; $('#list').replaceChildren(); if ($('#entryDialog').open) $('#entryDialog').close(); if ($('#importDialog').open) $('#importDialog').close(); if ($('#settings').open) $('#settings').close();}
+initExpenseFilter(render);
+function showLogin() {resetExpenseFilter();epoch++; state=null; $('#login').hidden=false; $('#app').hidden=true; $('#list').replaceChildren(); if ($('#entryDialog').open) $('#entryDialog').close(); if ($('#importDialog').open) $('#importDialog').close(); if ($('#settings').open) $('#settings').close();}
 async function refresh(){
  if (!hasSession()) {showLogin(); return;}
  if(loading){queued=true;return;}
@@ -60,7 +62,8 @@ chart.hidden = turnover === 0;
 chart.style.setProperty('--income-share', turnover ? `${t.income / turnover * 100}%` : '0%');
 
 const rules=tab==='rules';$('#sectionTitle').textContent=rules?'Wasze stałe opłaty':tab==='savings'?'Odłożone oszczędności':'Wszystkie wpisy';$('#sectionSubtitle').textContent=rules?'Uwzględniane co miesiąc, bez ponownego wpisywania.':tab==='savings'?'Wpłaty w tym miesiącu — bez łącznego salda oszczędności.':'Wasze codzienne finanse w jednym miejscu.';$('#add').textContent=rules?'＋ Stała opłata':'＋ Dodaj wpis';
-const items=rules?state.rules:state.entries.filter(e=>tab!=='savings'||e.kind==='saving');const list=$('#list');list.replaceChildren();
+const items=filterExpenses(rules?state.rules:state.entries.filter(e=>tab!=='savings'||e.kind==='saving'),tab==='entries',money);const list=$('#list');list.replaceChildren();
+if(!items.length && !$('#expenseFilterTotal').hidden){list.append(el('p','empty','Brak wydatków w wybranych kategoriach.'));return}
 if(!items.length){const empty=el('div','empty');empty.append(el('b','',rules?'↻':'＋'),el('strong','',rules?'Dodajcie pierwszą stałą opłatę':'Tu zaczyna się Wasz budżet'),el('p','',rules?'Czynsz, internet, raty — wpiszcie je tylko raz.':'Dodajcie przychód, wydatek lub odłożoną kwotę.'));list.append(empty);return}
 for(const e of items){const row=el('div','row');row.append(el('div','symbol',rules?'↻':e.kind==='income'?'↗':e.kind==='saving'?'◒':'↘'));const info=el('div','info');info.append(el('strong','',e.name),el('small','',rules?`${e.category} · termin: ${e.due}. dzień · ${e.paid?'opłacone':'do opłacenia'}`:`${e.category} · ${e.date.split('-').reverse().join('.')}`));row.append(info,el('div','amount'+(e.kind==='income'?' positive':''),(e.kind==='income'?'+':'−')+money(e.amount)));
 if(rules){const pay=el('button','',e.paid?'Cofnij':'Opłacone');pay.onclick=()=>action('paid',{id:e.id,month:$('#month').value,paid:!e.paid});row.append(pay);const stop=el('button','','×');stop.setAttribute('aria-label','Zakończ opłatę '+e.name);stop.onclick=()=>{if(confirm('Zakończyć opłatę „'+e.name+'” od wybranego miesiąca? Wcześniejsze miesiące pozostaną bez zmian.'))action('stop-rule',{id:e.id,month:$('#month').value})};row.append(stop)}else{const edit=el('button','','Edytuj');edit.setAttribute('aria-label','Edytuj wpis '+e.name);edit.onclick=()=>openForm(false,e);row.append(edit);const remove=el('button','','×');remove.setAttribute('aria-label','Usuń wpis '+e.name);remove.onclick=()=>{if(confirm('Usunąć wpis „'+e.name+'”?'))action('delete-entry',{id:e.id})};row.append(remove)}list.append(row)}}

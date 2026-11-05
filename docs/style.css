@@ -141,3 +141,18 @@ nav button.active { box-shadow: 0 2px var(--link); }
 [data-palette="cream"] { --title-ink: #806a49; }
 [data-theme="dark"] { --title-ink: var(--feature); }
 .brand, .heading h1 { color: var(--title-ink); }
+
+.expense-filter { margin: 12px 0; }
+.expense-filter summary { font-weight: 650; min-height: 32px; }
+.expense-categories { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.expense-categories label { display: flex; align-items: center; gap: 7px; margin: 0; min-height: 44px; }
+.expense-categories input { width: auto; min-height: 0; margin: 0; accent-color: var(--accent); }
+.expense-filter-total {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 20px;
+  border-top: 1px solid var(--line);
+  margin-top: 12px;
+  padding-top: 16px;
+}
