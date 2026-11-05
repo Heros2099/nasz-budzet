@@ -11,6 +11,7 @@ function isPublicKey(key) {
 export const configured = /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(config.supabaseUrl) && isPublicKey(config.publishableKey);
 function invalid(message, code = 'UNKNOWN') { return Object.assign(new Error(message), { code }); }
 try { session = JSON.parse(localStorage.getItem(storageKey)); } catch { /* Safari can restrict storage. */ }
+export function accountId() { return session?.user?.id || null; }
 export function hasSession() { return Boolean(session?.refresh_token); }
 function store(next) {
   session = next;

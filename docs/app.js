@@ -1,12 +1,15 @@
-import { api, login, logout, hasSession, configured, friendlyError } from './cloud.js?v=e5d292f';
+import { initSettings, entryCategories } from './settings.js?v=settings1';
+import { api, login, logout, hasSession, configured, friendlyError, accountId } from './cloud.js?v=settings1';
 import { parseAmount } from './budget.js';
 import { readIngScreenshot } from './ing.js';
 const $=s=>document.querySelector(s), money=n=>new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(n/100);
 const localDate=()=>{let d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
 let state=null,tab='entries',mode='entry',loading=false,queued=false,epoch=0;
 $('#month').value=localDate().slice(0,7);
+initSettings([...$('#entryForm select[name="category"]').options].map(option => option.value), accountId);
+
 function toast(t){$('#toast').textContent=t;$('#toast').hidden=false;setTimeout(()=>$('#toast').hidden=true,4000)}
-function showLogin() {epoch++; state=null; $('#login').hidden=false; $('#app').hidden=true; $('#list').replaceChildren(); if ($('#entryDialog').open) $('#entryDialog').close(); if ($('#importDialog').open) $('#importDialog').close();}
+function showLogin() {epoch++; state=null; $('#login').hidden=false; $('#app').hidden=true; $('#list').replaceChildren(); if ($('#entryDialog').open) $('#entryDialog').close(); if ($('#importDialog').open) $('#importDialog').close(); if ($('#settings').open) $('#settings').close();}
 async function refresh(){
  if (!hasSession()) {showLogin(); return;}
  if(loading){queued=true;return;}
@@ -63,7 +66,11 @@ for(const e of items){const row=el('div','row');row.append(el('div','symbol',rul
 if(rules){const pay=el('button','',e.paid?'Cofnij':'Opłacone');pay.onclick=()=>action('paid',{id:e.id,month:$('#month').value,paid:!e.paid});row.append(pay);const stop=el('button','','×');stop.setAttribute('aria-label','Zakończ opłatę '+e.name);stop.onclick=()=>{if(confirm('Zakończyć opłatę „'+e.name+'” od wybranego miesiąca? Wcześniejsze miesiące pozostaną bez zmian.'))action('stop-rule',{id:e.id,month:$('#month').value})};row.append(stop)}else{const edit=el('button','','Edytuj');edit.setAttribute('aria-label','Edytuj wpis '+e.name);edit.onclick=()=>openForm(false,e);row.append(edit);const remove=el('button','','×');remove.setAttribute('aria-label','Usuń wpis '+e.name);remove.onclick=()=>{if(confirm('Usunąć wpis „'+e.name+'”?'))action('delete-entry',{id:e.id})};row.append(remove)}list.append(row)}}
 $('#loginForm').onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector('button');b.disabled=true;$('#loginError').textContent='';try{await login($('#email').value.trim(),$('#password').value);$('#password').value='';await refresh()}catch(err){$('#loginError').textContent=friendlyError(err)}finally{b.disabled=false}};
 $('#logout').onclick=async()=>{try{showLogin();await logout()}catch(e){toast(friendlyError(e))}};
-function openForm(rule=false, entry=null){mode=rule?'rule':entry?'edit-entry':'entry';const f=$('#entryForm');f.reset();f.dataset.pendingId=entry?.id ?? crypto.randomUUID();f.elements.date.value=$('#month').value===localDate().slice(0,7)?localDate():$('#month').value+'-01';f.elements.start.value=$('#month').value;f.elements.kind.value=tab==='savings'?'saving':'expense';f.elements.category.value=rule?'Dom i rachunki':tab==='savings'?'Oszczędności':'Zakupy';$('#kindLabel').hidden=rule;$('#dateLabel').hidden=rule;f.elements.date.required=!rule;$('#ruleFields').hidden=!rule;if(entry){
+function openForm(rule=false, entry=null){mode=rule?'rule':entry?'edit-entry':'entry';const f=$('#entryForm');f.reset();f.dataset.pendingId=entry?.id ?? crypto.randomUUID();f.elements.date.value=$('#month').value===localDate().slice(0,7)?localDate():$('#month').value+'-01';f.elements.start.value=$('#month').value;f.elements.kind.value=tab==='savings'?'saving':'expense';const names=entryCategories();
+const preferred=rule?'Dom i rachunki':tab==='savings'?'Oszczędności':'Zakupy';
+const category=entry?.category || (names.includes(preferred)?preferred:names[0]);
+f.elements.category.replaceChildren(...[...new Set([...names,category])].map(name=>new Option(name)));
+f.elements.category.value=category;$('#kindLabel').hidden=rule;$('#dateLabel').hidden=rule;f.elements.date.required=!rule;$('#ruleFields').hidden=!rule;if(entry){
   for(const field of ['name','date','kind','category']) f.elements[field].value=entry[field];
   f.elements.amount.value=(entry.amount/100).toFixed(2).replace('.',',');
 }
@@ -148,7 +155,7 @@ importFile.onchange = async () => {
     const snapshots = await Promise.all(months.map(month => api('state?month=' + month)));
     if (!isCurrent()) return;
     const existing = snapshots.flatMap(snapshot => snapshot.entries);
-    const categories = document.querySelector('#entryForm select[name="category"]').options;
+    const categories = entryCategories();
     for (const expense of expenses) {
       const duplicate = existing.some(entry => entry.kind === 'expense' && entry.date === expense.date && entry.amount === expense.amount);
       const row = $('#importRow').content.firstElementChild.cloneNode(true);
@@ -159,8 +166,8 @@ importFile.onchange = async () => {
       row.querySelector('[name="date"]').value = expense.date;
       row.querySelector('[name="amount"]').value = (expense.amount / 100).toFixed(2).replace('.', ',');
       const category = row.querySelector('[name="category"]');
-      for (const option of categories) category.append(option.cloneNode(true));
-      category.value = expense.category;
+      for (const option of categories) category.append(new Option(option));
+      category.value = categories.includes(expense.category) ? expense.category : '';
       row.querySelector('.import-duplicate').hidden = !duplicate;
       importRows.append(row);
     }

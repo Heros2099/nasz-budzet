@@ -52,3 +52,92 @@
 .import-row legend { font-weight: 700; }
 .import-row input[type="checkbox"] { width: auto; margin: 0 8px 0 0; }
 #importTotal { font-weight: 700; }
+
+#settingsOpen { font-size: 21px; padding-inline: 12px; }
+#settings {
+  position: fixed;
+  inset: 0 0 0 auto;
+  margin: 0;
+  width: min(420px, 100%);
+  max-width: 100%;
+  height: 100dvh;
+  max-height: none;
+  border-radius: 16px 0 0 16px;
+}
+#settings::backdrop { background: #122c2844; backdrop-filter: none; }
+.category-setting { display: flex; gap: 8px; margin-bottom: 8px; }
+#categorySettings > button { margin: 8px 4px 0 0; }
+
+:root {
+  --canvas: #f7f8f4;
+  --surface: #fff;
+  --ink: #243e34;
+  --muted: #596f57;
+  --line: #e2e7de;
+  --accent: #205843;
+  --strong: #174d3f;
+  --pastel: #e8efdd;
+  --chart-expense: #f1cbae;
+  --link: var(--accent);
+}
+[data-palette="blue"] { --canvas: #f1f6fb; --ink: #253e55; --accent: #315e83; --strong: #294b69; --pastel: #dbeaf7; --chart-expense: #efcbd3; }
+[data-palette="lavender"] { --canvas: #faf3fa; --ink: #503954; --accent: #794d7b; --strong: #623e68; --pastel: #eeddf4; --chart-expense: #f4c7d2; }
+[data-palette="peach"] { --canvas: #fff4ed; --ink: #5a3a32; --accent: #944d40; --strong: #783d33; --pastel: #fbe1cd; --chart-expense: #f0b7b7; }
+[data-palette="cream"] { --canvas: #faf6eb; --ink: #514531; --accent: #77613c; --strong: #635136; --pastel: #f4e8cc; --chart-expense: #edc8ad; }
+[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: color-mix(in srgb, #141619 82%, var(--strong));
+  --surface: color-mix(in srgb, #24262a 77%, var(--strong));
+  --ink: #f3f0ee;
+  --muted: #c6c8c4;
+  --line: #494d50;
+  --link: var(--pastel);
+}
+:root { color: var(--ink); background: var(--canvas); }
+header, .month, .month button, .cards article, .panel, dialog, input, select {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+nav, .row, footer, .import-row { border-color: var(--line); }
+p, .text, .house, #status, nav button, .row small, .empty, .empty b,
+.empty strong, aside, footer, .login small { color: var(--muted); }
+.brand, nav button.active, .positive, summary, .cards article > span { color: var(--link); }
+nav button.active { box-shadow: 0 2px var(--link); }
+.primary { background: var(--accent); color: white; }
+.balance, .month-summary, #toast { background: var(--strong); color: white; }
+.balance p, .month-summary p, .daily-values summary { color: var(--pastel); }
+.light, .symbol, .row button, .category-setting button, #categoryAdd {
+  background: var(--pastel);
+  color: var(--strong);
+}
+.cards .saving { background: color-mix(in srgb, var(--surface) 80%, var(--pastel)); border-color: var(--line); }
+[data-theme="dark"] .cards .saving { background: color-mix(in srgb, var(--surface) 88%, var(--pastel)); }
+[data-theme="dark"] #formError, [data-theme="dark"] #loginError { color: #ffb8ab; }
+.summary-chart { background: conic-gradient(var(--pastel) 0 var(--income-share, 0%), var(--chart-expense) var(--income-share, 0%) 100%); }
+.summary-legend dt::before { background: var(--pastel); }
+.summary-legend div:last-child dt::before { background: var(--chart-expense); }
+.daily-line { stroke: var(--chart-expense); }
+
+:root { --feature: #dce9d5; --button: #d0e2c8; }
+[data-palette="blue"] { --feature: #dcebf8; --button: #cfe3f5; }
+[data-palette="lavender"] { --feature: #cbc9e7; --button: #ded5ef; --pastel: #f2e8fa; }
+[data-palette="peach"] { --feature: #f8dbca; --button: #f6d1c5; }
+[data-palette="cream"] { --feature: #f3e6c9; --button: #efdfba; }
+.primary { background: var(--button); color: var(--strong); }
+.balance, .month-summary { background: var(--feature); color: var(--strong); }
+.balance p, .month-summary p, .daily-values summary { color: var(--strong); }
+.daily-summary { border-color: color-mix(in srgb, var(--strong) 25%, transparent); }
+.daily-grid { stroke: color-mix(in srgb, var(--strong) 30%, transparent); }
+.daily-line { stroke: var(--strong); }
+.summary-chart, .summary-legend dt::before {
+  outline: 1px solid color-mix(in srgb, var(--strong) 25%, transparent);
+}
+
+:root { --title-ink: #527463; }
+[data-palette="blue"] { --title-ink: #526f88; }
+[data-palette="lavender"] { --title-ink: #796389; }
+[data-palette="peach"] { --title-ink: #935e53; }
+[data-palette="cream"] { --title-ink: #806a49; }
+[data-theme="dark"] { --title-ink: var(--feature); }
+.brand, .heading h1 { color: var(--title-ink); }
