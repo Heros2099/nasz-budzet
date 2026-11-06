@@ -83,6 +83,17 @@ export async function logout() {
   if (access) try { await request('/auth/v1/logout?scope=local', { method: 'POST', token: access }); } catch { /* Local logout always succeeds. */ }
 }
 export async function api(path, data) {
+  if (path === 'merchant-patterns') return rest('budget_merchant_patterns?select=fragment,name&name=not.is.null');
+  if (path === 'merchant-patterns-save' || path === 'merchant-patterns-migrate') {
+    const prefer = path === 'merchant-patterns-save' ? 'resolution=merge-duplicates' : 'resolution=ignore-duplicates';
+    return rest('budget_merchant_patterns', { method: 'POST', prefer, body: data });
+  }
+  if (path === 'merchant-pattern-edit') {
+    const rows = await rest('budget_merchant_patterns?fragment=eq.' + encodeURIComponent(data.original) + '&name=not.is.null', {
+      method: 'PATCH', prefer: 'return=representation', body: { fragment: data.fragment, name: data.name },
+    });
+    if (rows?.length !== 1) throw invalid('Wzór został już zmieniony na innym urządzeniu.');
+  }
   if (path === 'export') return rest('rpc/budget_export', { method: 'POST', body: {} });
   if (path.startsWith('state?month=')) {
     const month = path.slice('state?month='.length);

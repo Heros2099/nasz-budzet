@@ -1,4 +1,4 @@
-function merchantKey(name) {
+export function merchantKey(name) {
   return name.normalize('NFKC').toLocaleLowerCase('pl')
     .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
@@ -34,7 +34,7 @@ export function rememberCategory(account, name, category) {
   catch { /* Saving the expense still succeeds without local storage. */ }
 }
 
-function merchantPatterns(account) {
+export function localMerchantPatterns(account) {
   if (!account) return [];
   try { return JSON.parse(localStorage.getItem('budget-merchant-patterns:' + account)) ?? []; }
   catch { return []; }
@@ -44,16 +44,7 @@ export function matchMerchantPattern(name, fragment) {
   return (' ' + merchantKey(name) + ' ').includes(' ' + merchantKey(fragment) + ' ');
 }
 
-export function importedMerchantName(account, name) {
-  return merchantPatterns(account).find(([fragment]) => matchMerchantPattern(name, fragment))?.[1]
+export function importedMerchantName(patterns, name) {
+  return patterns.find(({ fragment }) => matchMerchantPattern(name, fragment))?.name
     ?? shortMerchantName(name);
-}
-
-export function saveMerchantPattern(account, fragment, name) {
-  if (!account) return;
-  const key = merchantKey(fragment);
-  const patterns = merchantPatterns(account).filter(([pattern]) => pattern !== key);
-  patterns.unshift([key, name]);
-  patterns.sort((a, b) => b[0].length - a[0].length);
-  localStorage.setItem('budget-merchant-patterns:' + account, JSON.stringify(patterns));
 }

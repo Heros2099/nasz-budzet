@@ -1,8 +1,8 @@
-import { rememberedCategory, rememberCategory, importedMerchantName, matchMerchantPattern, saveMerchantPattern } from './merchant-categories.js?v=patterns1';
+import { rememberedCategory, rememberCategory, importedMerchantName, matchMerchantPattern, merchantKey, localMerchantPatterns } from './merchant-categories.js?v=shared-patterns1';
 import { renderCharts } from './charts.js?v=charts3';
 import { initExpenseFilter, filterExpenses, resetExpenseFilter } from './category-filter.js';
 import { initSettings, entryCategories } from './settings.js?v=settings1';
-import { api, login, logout, hasSession, configured, friendlyError, accountId } from './cloud.js?v=settings1';
+import { api, login, logout, hasSession, configured, friendlyError, accountId } from './cloud.js?v=shared-patterns1';
 import { parseAmount } from './budget.js';
 import { readIngScreenshot } from './ing.js';
 const $=s=>document.querySelector(s), money=n=>new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(n/100);
@@ -132,6 +132,11 @@ importFile.onchange = async () => {
     const months = [...new Set(expenses.map(expense => expense.date.slice(0, 7)))];
     const snapshots = await Promise.all(months.map(month => api('state?month=' + month)));
     if (!isCurrent()) return;
+    let sharedPatterns = [];
+    let patternWarning = '';
+    try { sharedPatterns = await loadPatterns(); }
+    catch { patternWarning = ' Nie udało się pobrać wzorów z konta.'; }
+    if (!isCurrent()) return;
     const existing = snapshots.flatMap(snapshot => snapshot.entries);
     const categories = entryCategories();
     for (const expense of expenses) {
@@ -140,7 +145,7 @@ importFile.onchange = async () => {
       row.dataset.id = crypto.randomUUID();
       row.querySelector('legend').textContent = expense.blocked ? 'Blokada karty' : 'Płatność kartą';
       row.querySelector('[name="include"]').checked = !duplicate;
-      row.querySelector('[name="name"]').value = importedMerchantName(accountId(), expense.name);
+      row.querySelector('[name="name"]').value = importedMerchantName(sharedPatterns, expense.name);
       row.querySelector('[name="date"]').value = expense.date;
       row.querySelector('[name="amount"]').value = (expense.amount / 100).toFixed(2).replace('.', ',');
       const category = row.querySelector('[name="category"]');
@@ -154,7 +159,7 @@ importFile.onchange = async () => {
       row.querySelector('.import-duplicate').hidden = !duplicate;
       importRows.append(row);
     }
-    importStatus.textContent = 'Sprawdź daty, kwoty i kategorie przed zapisem.';
+    importStatus.textContent = 'Sprawdź daty, kwoty i kategorie przed zapisem.' + patternWarning;
     importForm.hidden = false;
     updateImportTotal();
   } catch (error) {
@@ -177,7 +182,7 @@ importForm.onsubmit = async event => {
         if (!/[\p{L}\p{N}]{3}/u.test(fragment) || !matchMerchantPattern(row.dataset.merchant, fragment)) {
           throw new Error('Wzór musi zawierać co najmniej trzy litery lub cyfry obok siebie i pasować do odczytanej nazwy.');
         }
-        patterns.push([fragment, name]);
+        patterns.push({fragment: merchantKey(fragment), name});
       }
       return {
         id: row.dataset.id,
@@ -208,11 +213,13 @@ importForm.onsubmit = async event => {
     for (const [merchant, category] of corrections) rememberCategory(account, merchant, category);
     importDialog.close();
     let patternSaved = true;
-    for (const [fragment, name] of patterns) {
-      try { saveMerchantPattern(account, fragment, name); }
-      catch { patternSaved = false; }
+    if (patterns.length) {
+      try {
+        if (!account || account !== accountId()) throw new Error('Sesja została zmieniona.');
+        await api('merchant-patterns-save', [...new Map(patterns.map(pattern => [pattern.fragment, pattern])).values()]);
+      } catch { patternSaved = false; }
     }
-    toast(patternSaved ? 'Zapisano wydatki we wspólnym budżecie.' : 'Zapisano wydatki. Przeglądarka nie zapisała wszystkich wzorów nazw.');
+    toast(patternSaved ? 'Zapisano wydatki we wspólnym budżecie.' : 'Zapisano wydatki. Nie udało się zapisać wzorów nazw na koncie.');
     await refresh();
   } catch (error) {
     importStatus.textContent = friendlyError(error);
@@ -222,3 +229,73 @@ importForm.onsubmit = async event => {
     importRows.inert = false;
   }
 };
+
+async function loadPatterns() {
+  const account = accountId();
+  const legacy = localMerchantPatterns(account);
+  if (legacy.length) {
+    await api('merchant-patterns-migrate', legacy.map(([fragment, name]) => ({fragment, name})));
+    try { localStorage.removeItem('budget-merchant-patterns:' + account); }
+    catch { /* Retrying the migration preserves existing account patterns. */ }
+  }
+  if (account !== accountId()) throw new Error('Sesja została zmieniona.');
+  const patterns = await api('merchant-patterns');
+  return patterns.sort((a, b) => b.fragment.length - a.fragment.length);
+}
+
+const patternRows = $('#merchantPatternRows');
+const patternStatus = $('#merchantPatternStatus');
+$('#settingsOpen').addEventListener('click', () => {
+  patternRows.replaceChildren();
+  patternStatus.textContent = '';
+});
+$('#loadMerchantPatterns').onclick = showPatterns;
+
+async function showPatterns() {
+  const account = accountId();
+  patternStatus.textContent = 'Pobieranie wzorów…';
+  try {
+    const patterns = await loadPatterns();
+    if (account !== accountId() || !$('#settings').open) return;
+    patternRows.replaceChildren(...patterns.map(pattern => patternEditor(pattern, account)));
+    patternStatus.textContent = patterns.length ? '' : 'Nie zapisano jeszcze żadnego wzoru.';
+  } catch (error) {
+    if (account === accountId()) patternStatus.textContent = friendlyError(error);
+  }
+}
+
+function patternEditor(pattern, account) {
+  const form = $('#merchantPatternEditor').content.firstElementChild.cloneNode(true);
+  form.elements.fragment.value = pattern.fragment;
+  form.elements.name.value = pattern.name;
+  async function save(remove) {
+    if (account !== accountId()) return;
+    const raw = form.elements.fragment.value.trim();
+    const fragment = merchantKey(raw);
+    const name = form.elements.name.value.trim();
+    if (!remove && (!/[\p{L}\p{N}]{3}/u.test(raw) || !name)) {
+      patternStatus.textContent = 'Wpisz krótką nazwę i fragment zawierający co najmniej trzy litery lub cyfry obok siebie.';
+      return;
+    }
+    const buttons = form.querySelectorAll('button');
+    buttons.forEach(button => { button.disabled = true; });
+    try {
+      await api('merchant-pattern-edit', {
+        original: pattern.fragment,
+        fragment: remove ? pattern.fragment : fragment,
+        name: remove ? null : name,
+      });
+      await showPatterns();
+    } catch (error) {
+      if (account === accountId()) patternStatus.textContent = error.code === '23505'
+        ? 'Ten fragment jest już zapisany. Zmień istniejący wzór.' : friendlyError(error);
+    } finally {
+      buttons.forEach(button => { button.disabled = false; });
+    }
+  }
+  form.onsubmit = event => { event.preventDefault(); save(false); };
+  form.querySelector('[data-remove-pattern]').onclick = () => {
+    if (confirm('Usunąć wzór „' + pattern.fragment + '” z konta?')) save(true);
+  };
+  return form;
+}
