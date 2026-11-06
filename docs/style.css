@@ -170,3 +170,10 @@ nav button.active { box-shadow: 0 2px var(--link); }
 }
 
 #dailyTicks { fill: var(--strong); font: 11px system-ui, sans-serif; text-anchor: middle; }
+
+.chart-controls { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin: 12px 0; }
+.chart-controls label, #oneOffLabel { display: flex; align-items: center; gap: 8px; }
+.chart-controls input, #oneOffLabel input { width: auto; min-height: 0; margin: 0; }
+.chart-category { text-align: left; text-decoration: underline; padding-inline: 4px; color: inherit; }
+.split-part { display: grid; grid-template-columns: 1fr 1fr auto; align-items: end; gap: 8px; margin-bottom: 8px; }
+.split-part label { margin: 0; min-width: 0; }

@@ -2,7 +2,7 @@ const $ = selector => document.querySelector(selector);
 const percent = new Intl.NumberFormat('pl-PL', { style: 'percent', maximumFractionDigits: 1 });
 const colors = ['#a8c9ed', '#efb2c5', '#b9d6a5', '#f2c29b', '#c8b5e8', '#9ed4ce', '#efd589', '#d6b2a8'];
 
-export function renderCharts(entries, rules, totals, month, today, money) {
+export function renderCharts(entries, rules, totals, month, today, money, onCategory) {
   const outgoing = totals.expense + totals.fixed;
   const turnover = totals.income + outgoing;
   $('#summaryEmpty').hidden = turnover > 0;
@@ -11,11 +11,11 @@ export function renderCharts(entries, rules, totals, month, today, money) {
   chart.style.setProperty('--income-share', (turnover ? totals.income / turnover * 100 : 0) + '%');
   $('#summaryIncome').textContent = turnover ? money(totals.income) + ' · ' + percent.format(totals.income / turnover) : money(0);
   $('#summaryExpense').textContent = turnover ? money(outgoing) + ' · ' + percent.format(outgoing / turnover) : money(0);
-  renderCategories([...entries.filter(entry => entry.kind === 'expense'), ...rules], outgoing, money);
+  renderCategories([...entries.filter(entry => entry.kind === 'expense'), ...rules], outgoing, money, onCategory);
   renderDaily(entries, month, today, money);
 }
 
-function renderCategories(entries, total, money) {
+function renderCategories(entries, total, money, onCategory) {
   const byCategory = new Map();
   for (const entry of entries) {
     const category = entry.category || 'Bez kategorii';
@@ -35,7 +35,12 @@ function renderCategories(entries, total, money) {
     row.style.setProperty('--swatch', color);
     const title = document.createElement('dt');
     const value = document.createElement('dd');
-    title.textContent = category;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'text chart-category';
+    button.textContent = category;
+    button.onclick = () => onCategory(category, entries.filter(entry => (entry.category || 'Bez kategorii') === category));
+    title.append(button);
     value.textContent = money(amount) + ' · ' + percent.format(amount / total);
     row.append(title, value);
     return row;

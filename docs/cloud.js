@@ -83,6 +83,21 @@ export async function logout() {
   if (access) try { await request('/auth/v1/logout?scope=local', { method: 'POST', token: access }); } catch { /* Local logout always succeeds. */ }
 }
 export async function api(path, data) {
+  if (path === 'account-categories') {
+    const rows = await rest('budget_account_categories?select=names,revision');
+    return rows[0] ?? null;
+  }
+  if (path === 'account-categories-save') {
+    const body = { names: data.names, revision: crypto.randomUUID() };
+    const rows = data.revision
+      ? await rest('budget_account_categories?revision=eq.' + encodeURIComponent(data.revision), {
+        method: 'PATCH', prefer: 'return=representation', body,
+      })
+      : await rest('budget_account_categories', {
+        method: 'POST', prefer: 'resolution=ignore-duplicates,return=representation', body,
+      });
+    return rows[0] ?? null;
+  }
   if (path === 'merchant-patterns') return rest('budget_merchant_patterns?select=fragment,name&name=not.is.null');
   if (path === 'merchant-patterns-save' || path === 'merchant-patterns-migrate') {
     const prefer = path === 'merchant-patterns-save' ? 'resolution=merge-duplicates' : 'resolution=ignore-duplicates';
@@ -100,6 +115,7 @@ export async function api(path, data) {
     const snapshot = await rest('rpc/budget_snapshot', { method: 'POST', body: { selected_month: monthStart(month) } });
     return summarize(snapshot.entries || [], snapshot.rules || [], month);
   }
+  if (path === 'split-expense') return rest('rpc/budget_split_expense', { method: 'POST', body: data });
   if (path === 'entry') return rest('budget_entries', { method: 'POST', prefer: 'resolution=ignore-duplicates', body: { ...data, id: data.id || crypto.randomUUID() } });
   if (path === 'import-entries') return rest('budget_entries', { method: 'POST', prefer: 'resolution=ignore-duplicates', body: data });
   if (path === 'rule') return rest('budget_rules', { method: 'POST', prefer: 'resolution=ignore-duplicates', body: { ...data, id: data.id || crypto.randomUUID(), start: monthStart(data.start) } });
