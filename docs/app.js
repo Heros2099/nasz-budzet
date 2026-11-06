@@ -1,3 +1,4 @@
+import { renderCharts } from './charts.js?v=charts3';
 import { initExpenseFilter, filterExpenses, resetExpenseFilter } from './category-filter.js';
 import { initSettings, entryCategories } from './settings.js?v=settings1';
 import { api, login, logout, hasSession, configured, friendlyError, accountId } from './cloud.js?v=settings1';
@@ -5,6 +6,7 @@ import { parseAmount } from './budget.js';
 import { readIngScreenshot } from './ing.js';
 const $=s=>document.querySelector(s), money=n=>new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(n/100);
 const localDate=()=>{let d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+let stateMonth;
 let state=null,tab='entries',mode='entry',loading=false,queued=false,epoch=0;
 $('#month').value=localDate().slice(0,7);
 initSettings([...$('#entryForm select[name="category"]').options].map(option => option.value), accountId);
@@ -19,7 +21,7 @@ async function refresh(){
  try {
   const result=await api('state?month='+month);
   if(version!==epoch||!hasSession()||month!==$('#month').value)return;
-  state=result; $('#app').hidden=false; $('#login').hidden=true; render();
+  state=result; stateMonth=month; $('#app').hidden=false; $('#login').hidden=true; render();
   $('#status').textContent='● Zaktualizowano o '+new Date().toLocaleTimeString('pl-PL');
  }catch(e){
   if(version!==epoch)return;
@@ -30,36 +32,8 @@ async function refresh(){
 }
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n}
 async function action(path,data){try{await api(path,data);await refresh()}catch(e){toast(friendlyError(e))}}
-function renderDailyExpenses(entries, month) {
-  const [year, monthNumber] = month.split('-').map(Number);
-  const days = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
-  const amounts = Array(days).fill(0);
-  for (const entry of entries) {
-    if (entry.kind === 'expense') amounts[Number(entry.date.slice(8, 10)) - 1] += entry.amount;
-  }
-  const maximum = Math.max(...amounts);
-  const points = amounts.map((amount, index) => {
-    const x = 4 + 292 * index / (days - 1);
-    const y = maximum ? 106 - 100 * amount / maximum : 106;
-    return `${x.toFixed(2)},${y.toFixed(2)}`;
-  });
-  $('#dailyLine').setAttribute('points', points.join(' '));
-  $('#dailyScale').textContent = maximum
-    ? `Skala: od 0 zł do ${money(maximum)}`
-    : 'Brak wydatków w tym miesiącu.';
-  $('#dailyLastDay').textContent = `${days}. dzień`;
-  $('#dailyAmounts').replaceChildren(...amounts.map(amount => el('li', '', money(amount))));
-}
 function render(){if(!state)return;const t=state.totals;$('#available').textContent=money(t.available);$('#income').textContent=money(t.income);$('#expense').textContent=money(t.expense+t.fixed);$('#savings').textContent=money(t.savings);
-renderDailyExpenses(state.entries, $('#month').value);
-const outgoing = t.expense + t.fixed;
-const turnover = t.income + outgoing;
-$('#summaryIncome').textContent = money(t.income);
-$('#summaryExpense').textContent = money(outgoing);
-$('#summaryEmpty').hidden = turnover > 0;
-const chart = $('#summaryChart');
-chart.hidden = turnover === 0;
-chart.style.setProperty('--income-share', turnover ? `${t.income / turnover * 100}%` : '0%');
+renderCharts(state.entries, state.rules, t, stateMonth, localDate(), money);
 
 const rules=tab==='rules';$('#sectionTitle').textContent=rules?'Wasze stałe opłaty':tab==='savings'?'Odłożone oszczędności':'Wszystkie wpisy';$('#sectionSubtitle').textContent=rules?'Uwzględniane co miesiąc, bez ponownego wpisywania.':tab==='savings'?'Wpłaty w tym miesiącu — bez łącznego salda oszczędności.':'Wasze codzienne finanse w jednym miejscu.';$('#add').textContent=rules?'＋ Stała opłata':'＋ Dodaj wpis';
 const items=filterExpenses(rules?state.rules:state.entries.filter(e=>tab!=='savings'||e.kind==='saving'),tab==='entries',money);const list=$('#list');list.replaceChildren();

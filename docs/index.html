@@ -1,4 +1,4 @@
-<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://*.supabase.co; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'self'; img-src 'self'; base-uri 'self'; form-action 'self'"><meta name="theme-color" content="#174d3f"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nasz budżet"><title>Nasz budżet — domowe finanse</title><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg"><link rel="stylesheet" href="./style.css?v=expense-filter1"><script type="module" src="./app.js?v=expense-filter1"></script></head><body>
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://*.supabase.co; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'self'; img-src 'self'; base-uri 'self'; form-action 'self'"><meta name="theme-color" content="#174d3f"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nasz budżet"><title>Nasz budżet — domowe finanse</title><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg"><link rel="stylesheet" href="./style.css?v=charts3"><script type="module" src="./app.js?v=charts3"></script></head><body>
 <div id="login" class="login"><div class="brand">⌂ <span>Nasz budżet</span></div><h1>Wasz dom.<br>Wasze plany.</h1><p>Jeden wspólny budżet, zawsze pod ręką.</p><p id="setupNotice" hidden>Aplikacja jest przygotowana, ale czeka jeszcze na podłączenie Waszej bazy danych. Nie można jeszcze zapisywać wydatków.</p><form id="loginForm"><label>E-mail do wspólnego budżetu<input id="email" type="email" autocomplete="username" required></label><label>Hasło<input id="password" type="password" autocomplete="current-password" required></label><button class="primary">Otwórz budżet →</button></form><p id="loginError" role="alert"></p><small>Na obu telefonach zalogujcie się tym samym e-mailem i hasłem do budżetu. To konto aplikacji — nie hasło do GitHuba ani panelu Supabase.</small></div>
 <div id="app" hidden><header><a href="./" class="brand">⌂ <span>Nasz budżet</span></a><div><span class="house">BUDŻET GOSPODARSTWA DOMOWEGO</span><button id="logout" class="text">Wyloguj</button><button id="settingsOpen" class="text" aria-label="Ustawienia" aria-haspopup="dialog">☰</button></div></header><main><div class="heading"><div><h1>Ola i Mateusz<br>Kasiora 💰</h1></div><div class="month"><button id="prev" aria-label="Poprzedni miesiąc">‹</button><input id="month" type="month" aria-label="Miesiąc budżetu"><button id="next" aria-label="Następny miesiąc">›</button></div></div>
 <div id="status" role="status">Łączenie…</div><section class="overview"><article class="balance"><p>DO DYSPOZYCJI</p><h2 id="available">—</h2><p>Po uwzględnieniu wszystkich stałych opłat<br>i odłożonych oszczędności.</p><button id="addMain" class="light">＋ Dodaj wpis</button><button id="importOpen" class="light" type="button">Importuj ze zdjęcia</button><div class="decor">⌂</div></article><div class="cards"><article><span>↗</span><p>Przychody</p><h2 id="income">—</h2></article><article><span>↘</span><p>Wydatki i stałe opłaty</p><h2 id="expense">—</h2></article><article class="saving"><span>◒</span><p>Odłożone w tym miesiącu</p><h2 id="savings">—</h2></article></div></section>
@@ -7,7 +7,8 @@
   <div id="expenseCategories" class="expense-categories"></div>
   <p id="expenseFilterEmpty" hidden>Brak kategorii wydatków w tym miesiącu.</p>
   <button id="expenseFilterClear" class="text" type="button" hidden>Wyczyść filtr</button>
-</details><div id="list"></div><div id="expenseFilterTotal" class="expense-filter-total" aria-live="polite" hidden><span>Wydatki w wybranych kategoriach w tym miesiącu</span><strong></strong></div></section><section class="panel month-summary" aria-labelledby="summaryTitle">
+</details><div id="list"></div><div id="expenseFilterTotal" class="expense-filter-total" aria-live="polite" hidden><span>Wydatki w wybranych kategoriach w tym miesiącu</span><strong></strong></div></section><div class="pie-panels">
+<section class="panel month-summary" aria-labelledby="summaryTitle">
   <h2 id="summaryTitle">Podsumowanie miesiąca</h2>
   <p id="summaryEmpty">Brak przychodów i wydatków w tym miesiącu.</p>
   <div id="summaryChart" class="summary-chart" aria-hidden="true" hidden></div>
@@ -15,15 +16,27 @@
     <div><dt>Przychody</dt><dd id="summaryIncome">—</dd></div>
     <div><dt>Wydatki i stałe opłaty</dt><dd id="summaryExpense">—</dd></div>
   </dl>
-  <div class="daily-summary">
-    <h3 id="dailyTitle">Wydatki dzień po dniu</h3>
+</section>
+<section class="panel month-summary" aria-labelledby="categoryChartTitle">
+  <h2 id="categoryChartTitle">Wydatki według kategorii</h2>
+  <p>Udział w wydatkach i stałych opłatach.</p>
+  <p id="categoryChartEmpty">Brak wydatków w tym miesiącu.</p>
+  <div id="categoryChart" class="summary-chart" aria-hidden="true" hidden></div>
+  <dl id="categoryChartLegend" class="summary-legend"></dl>
+</section>
+</div>
+  <section class="panel month-summary" aria-labelledby="dailyTitle">
+    <h2 id="dailyTitle">Wydatki dzień po dniu</h2>
     <p>Według daty wpisu, bez stałych opłat.</p>
     <p id="dailyScale"></p>
-    <svg id="dailyChart" viewBox="0 0 300 112" role="img" aria-labelledby="dailyTitle" aria-describedby="dailyScale">
-      <path class="daily-grid" d="M4 6H296 M4 56H296 M4 106H296"/>
+    <div id="dailyPlot"><div id="dailyPlotInner">
+    <svg id="dailyChart" viewBox="0 0 320 156" role="img" aria-labelledby="dailyTitle" aria-describedby="dailyScale">
+      <path id="dailyGrid" class="daily-grid"/>
       <polyline id="dailyLine" class="daily-line"/>
+      <g id="dailyPeaks" aria-hidden="true"/>
+      <g id="dailyTicks" aria-hidden="true"/>
     </svg>
-    <div class="daily-axis"><span>1. dzień</span><span id="dailyLastDay"></span></div>
+    </div>
     <details class="daily-values">
       <summary>Kwoty według dni</summary>
       <ol id="dailyAmounts"></ol>

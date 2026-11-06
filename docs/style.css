@@ -156,3 +156,17 @@ nav button.active { box-shadow: 0 2px var(--link); }
   margin-top: 12px;
   padding-top: 16px;
 }
+
+.pie-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+#categoryChartLegend dt::before { background: var(--swatch); }
+#categoryChartLegend dt { overflow-wrap: anywhere; min-width: 0; }
+#summaryChart { background: conic-gradient(var(--button) 0 var(--income-share), var(--chart-expense) var(--income-share) 100%); }
+#summaryIncome, #summaryExpense, #categoryChartLegend dd { white-space: nowrap; }
+#dailyPlot { overflow-x: auto; }
+#dailyChart { display: block; width: 100%; }
+#dailyPeaks { fill: var(--strong); font: 600 11px system-ui, sans-serif; text-anchor: middle; }
+@media (max-width: 650px) {
+  .pie-panels { grid-template-columns: 1fr; gap: 0; }
+}
+
+#dailyTicks { fill: var(--strong); font: 11px system-ui, sans-serif; text-anchor: middle; }
