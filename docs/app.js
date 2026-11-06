@@ -54,12 +54,7 @@ if(!items.length && !$('#expenseFilterTotal').hidden){list.append(el('p','empty'
 if(!items.length){const empty=el('div','empty');empty.append(el('b','',rules?'↻':'＋'),el('strong','',rules?'Dodajcie pierwszą stałą opłatę':'Tu zaczyna się Wasz budżet'),el('p','',rules?'Czynsz, internet, raty — wpiszcie je tylko raz.':'Dodajcie przychód, wydatek lub odłożoną kwotę.'));list.append(empty);return}
 for(const e of items){const row=el('div','row');row.append(el('div','symbol',rules?'↻':e.kind==='income'?'↗':e.kind==='saving'?'◒':'↘'));const info=el('div','info');info.append(el('strong','',e.name),el('small','',rules?`${e.category} · termin: ${e.due}. dzień · ${e.paid?'opłacone':'do opłacenia'}`:`${e.category} · ${e.date.split('-').reverse().join('.')}${e.one_off ? ' · Jednorazowy' : ''}`));if (!rules && e.note) info.append(el('small', '', e.note));
 row.append(info,el('div','amount'+(e.kind==='income'?' positive':''),(e.kind==='income'?'+':'−')+money(e.amount)));
-if(rules){const pay=el('button','',e.paid?'Cofnij':'Opłacone');pay.onclick=()=>action('paid',{id:e.id,month:$('#month').value,paid:!e.paid});row.append(pay);const stop=el('button','','×');stop.setAttribute('aria-label','Zakończ opłatę '+e.name);stop.onclick=()=>{if(confirm('Zakończyć opłatę „'+e.name+'” od wybranego miesiąca? Wcześniejsze miesiące pozostaną bez zmian.'))action('stop-rule',{id:e.id,month:$('#month').value})};row.append(stop)}else{const edit=el('button','','Edytuj');edit.setAttribute('aria-label','Edytuj wpis '+e.name);edit.onclick=()=>openForm(false,e);row.append(edit);
-if(e.kind==='expense'){
-  const split=el('button','','Podziel');
-  split.onclick=()=>openSplit(e);
-  row.append(split);
-}
+if(rules){const pay=el('button','',e.paid?'Cofnij':'Opłacone');pay.onclick=()=>action('paid',{id:e.id,month:$('#month').value,paid:!e.paid});row.append(pay);const stop=el('button','','×');stop.setAttribute('aria-label','Zakończ opłatę '+e.name);stop.onclick=()=>{if(confirm('Zakończyć opłatę „'+e.name+'” od wybranego miesiąca? Wcześniejsze miesiące pozostaną bez zmian.'))action('stop-rule',{id:e.id,month:$('#month').value})};row.append(stop)}else{const edit=el('button');edit.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 6 4 4M4 20l4-1L20 7l-3-3L5 16z"/></svg>';edit.setAttribute('aria-label','Edytuj wpis '+e.name);edit.onclick=()=>openForm(false,e);row.append(edit);
 const remove=el('button','','×');remove.setAttribute('aria-label','Usuń wpis '+e.name);remove.onclick=()=>{if(confirm('Usunąć wpis „'+e.name+'”?'))action('delete-entry',{id:e.id})};row.append(remove)}list.append(row)}}
 $('#loginForm').onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector('button');b.disabled=true;$('#loginError').textContent='';try{await login($('#email').value.trim(),$('#password').value);$('#password').value='';await refresh()}catch(err){$('#loginError').textContent=friendlyError(err)}finally{b.disabled=false}};
 $('#logout').onclick=async()=>{if(!confirm('Czy na pewno chcesz się wylogować?'))return;try{showLogin();await logout()}catch(e){toast(friendlyError(e))}};
@@ -74,10 +69,11 @@ f.elements.category.value=category;$('#kindLabel').hidden=rule;$('#dateLabel').h
 f.elements.oneOff.checked=Boolean(entry?.one_off);
 f.elements.note.value = entry?.note ?? '';
 $('#openReceipt').onclick = () => openReceipt(entry.id);
+$('#openSplit').onclick = () => openSplit(entry);
 const updateOneOff=()=>{
   const expense = !rule && f.elements.kind.value === 'expense';
   $('#oneOffLabel').hidden = $('#entryNoteLabel').hidden = !expense;
-  $('#openReceipt').hidden = !expense || entry?.kind !== 'expense';
+  $('#openReceipt').hidden = $('#openSplit').hidden = !expense || entry?.kind !== 'expense';
 };
 f.elements.kind.onchange=updateOneOff;
 updateOneOff();
@@ -412,6 +408,7 @@ $('#splitForm').onsubmit = async event => {
     $('#splitRows').inert = true;
     await api('split-expense', {entry_id: splitEntry.id, expected_amount: splitEntry.amount, parts});
     splitDialog.close();
+    $('#entryDialog').close();
     toast('Zapisano podział wydatku.');
     await refresh();
   } catch (error) {

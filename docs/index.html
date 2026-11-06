@@ -1,39 +1,12 @@
-<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://*.supabase.co; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'self'; form-action 'self'"><meta name="theme-color" content="#174d3f"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nasz budżet"><title>Nasz budżet — domowe finanse</title><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg"><link rel="stylesheet" href="./style.css?v=search1"><script type="module" src="./app.js?v=search2"></script></head><body>
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://*.supabase.co; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'self'; form-action 'self'"><meta name="theme-color" content="#174d3f"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Nasz budżet"><title>Nasz budżet — domowe finanse</title><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg"><link rel="stylesheet" href="./style.css?v=search1"><script type="module" src="./app.js?v=entry-actions1"></script></head><body>
 <div id="login" class="login"><div class="brand">⌂ <span>Nasz budżet</span></div><h1>Wasz dom.<br>Wasze plany.</h1><p>Jeden wspólny budżet, zawsze pod ręką.</p><p id="setupNotice" hidden>Aplikacja jest przygotowana, ale czeka jeszcze na podłączenie Waszej bazy danych. Nie można jeszcze zapisywać wydatków.</p><form id="loginForm"><label>E-mail do wspólnego budżetu<input id="email" type="email" autocomplete="username" required></label><label>Hasło<input id="password" type="password" autocomplete="current-password" required></label><button class="primary">Otwórz budżet →</button></form><p id="loginError" role="alert"></p><small>Na obu telefonach zalogujcie się tym samym e-mailem i hasłem do budżetu. To konto aplikacji — nie hasło do GitHuba ani panelu Supabase.</small></div>
 <div id="app" hidden><header><a href="./" class="brand">⌂ <span>Nasz budżet</span></a><div><span class="house">BUDŻET GOSPODARSTWA DOMOWEGO</span><button id="entrySearchOpen" class="text" type="button" aria-label="Szukaj wpisów" aria-haspopup="dialog"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg></button><button id="settingsOpen" class="text" aria-label="Ustawienia" aria-haspopup="dialog">☰</button></div></header><main><div class="heading"><div><h1>Ola i Mateusz<br>Kasiora 💰</h1></div><div class="month"><button id="prev" aria-label="Poprzedni miesiąc">‹</button><input id="month" type="month" aria-label="Miesiąc budżetu"><button id="next" aria-label="Następny miesiąc">›</button></div></div>
 <div id="status" role="status">Łączenie…</div><section class="overview"><article class="balance"><p>DO DYSPOZYCJI</p><h2 id="available">—</h2><p>Po uwzględnieniu wszystkich stałych opłat<br>i odłożonych oszczędności.</p><button id="addMain" class="light">＋ Dodaj wpis</button><button id="importOpen" class="light" type="button">Importuj ze zdjęcia</button><div class="decor">⌂</div></article><div class="cards"><article><span>↗</span><p>Przychody</p><h2 id="income">—</h2></article><article><span>↘</span><p>Wydatki i stałe opłaty</p><h2 id="expense">—</h2></article><article class="saving"><span>◒</span><p>Odłożone w tym miesiącu</p><h2 id="savings">—</h2></article></div></section>
-<nav aria-label="Widok budżetu"><button class="active" data-tab="entries">Historia wpisów</button><button data-tab="rules">Stałe opłaty</button><button data-tab="savings">Oszczędności</button></nav><section class="panel"><div class="panelhead"><div><h2 id="sectionTitle">Wszystkie wpisy</h2><p id="sectionSubtitle">Wasze codzienne finanse w jednym miejscu.</p></div><button id="add" class="primary">＋ Dodaj wpis</button></div><details id="expenseFilter" class="expense-filter">
-  <summary>Filtruj wydatki według kategorii</summary>
-  <div id="expenseCategories" class="expense-categories"></div>
-  <p id="expenseFilterEmpty" hidden>Brak kategorii wydatków w tym miesiącu.</p>
-  <button id="expenseFilterClear" class="text" type="button" hidden>Wyczyść filtr</button>
-</details><details id="dayFilter" class="expense-filter">
-  <summary>Filtruj wpisy według dni</summary>
-  <div id="entryDays" class="expense-categories"></div>
-  <button id="dayFilterClear" class="text" type="button" hidden>Wyczyść dni</button>
-</details><div id="list"></div><div id="expenseFilterTotal" class="expense-filter-total" aria-live="polite" hidden><span>Suma wydatków po filtrowaniu</span><strong></strong></div></section><div class="chart-controls">
+<div class="chart-controls">
   <label><input type="checkbox" id="excludeOneOff"> Pomiń wydatki jednorazowe na wykresach</label>
   <button id="exportMonth" class="text" type="button">↓ Eksport miesiąca do Excela</button>
 </div>
-<div class="pie-panels">
-<section class="panel month-summary" aria-labelledby="summaryTitle">
-  <h2 id="summaryTitle">Podsumowanie miesiąca</h2>
-  <p id="summaryEmpty">Brak przychodów i wydatków w tym miesiącu.</p>
-  <div id="summaryChart" class="summary-chart" aria-hidden="true" hidden></div>
-  <dl class="summary-legend">
-    <div><dt>Przychody</dt><dd id="summaryIncome">—</dd></div>
-    <div><dt>Wydatki i stałe opłaty</dt><dd id="summaryExpense">—</dd></div>
-  </dl>
-</section>
-<section class="panel month-summary" aria-labelledby="categoryChartTitle">
-  <h2 id="categoryChartTitle">Wydatki według kategorii</h2>
-  <p>Udział w wydatkach i stałych opłatach.</p>
-  <p id="categoryChartEmpty">Brak wydatków w tym miesiącu.</p>
-  <div id="categoryChart" class="summary-chart" aria-hidden="true" hidden></div>
-  <dl id="categoryChartLegend" class="summary-legend"></dl>
-</section>
-</div>
-  <section class="panel month-summary" aria-labelledby="dailyTitle">
+<section class="panel month-summary" aria-labelledby="dailyTitle">
     <h2 id="dailyTitle">Wydatki dzień po dniu</h2>
     <p>Dotknij punktu, aby zobaczyć wydatki z danego dnia.</p>
     <p id="dailyScale"></p>
@@ -51,6 +24,36 @@
     </details>
   </div>
 </section>
+<div class="pie-panels">
+<section class="panel month-summary" aria-labelledby="categoryChartTitle">
+  <h2 id="categoryChartTitle">Wydatki według kategorii</h2>
+  <p>Udział w wydatkach i stałych opłatach.</p>
+  <p id="categoryChartEmpty">Brak wydatków w tym miesiącu.</p>
+  <div id="categoryChart" class="summary-chart" aria-hidden="true" hidden></div>
+  <dl id="categoryChartLegend" class="summary-legend"></dl>
+</section>
+<section class="panel month-summary" aria-labelledby="summaryTitle">
+  <h2 id="summaryTitle">Podsumowanie miesiąca</h2>
+  <p id="summaryEmpty">Brak przychodów i wydatków w tym miesiącu.</p>
+  <div id="summaryChart" class="summary-chart" aria-hidden="true" hidden></div>
+  <dl class="summary-legend">
+    <div><dt>Przychody</dt><dd id="summaryIncome">—</dd></div>
+    <div><dt>Wydatki i stałe opłaty</dt><dd id="summaryExpense">—</dd></div>
+  </dl>
+</section>
+
+</div>
+
+<nav aria-label="Widok budżetu"><button class="active" data-tab="entries">Historia wpisów</button><button data-tab="rules">Stałe opłaty</button><button data-tab="savings">Oszczędności</button></nav><section class="panel"><div class="panelhead"><div><h2 id="sectionTitle">Wszystkie wpisy</h2><p id="sectionSubtitle">Wasze codzienne finanse w jednym miejscu.</p></div><button id="add" class="primary">＋ Dodaj wpis</button></div><details id="expenseFilter" class="expense-filter">
+  <summary>Filtruj wydatki według kategorii</summary>
+  <div id="expenseCategories" class="expense-categories"></div>
+  <p id="expenseFilterEmpty" hidden>Brak kategorii wydatków w tym miesiącu.</p>
+  <button id="expenseFilterClear" class="text" type="button" hidden>Wyczyść filtr</button>
+</details><details id="dayFilter" class="expense-filter">
+  <summary>Filtruj wpisy według dni</summary>
+  <div id="entryDays" class="expense-categories"></div>
+  <button id="dayFilterClear" class="text" type="button" hidden>Wyczyść dni</button>
+</details><div id="list"></div><div id="expenseFilterTotal" class="expense-filter-total" aria-live="polite" hidden><span>Suma wydatków po filtrowaniu</span><strong></strong></div></section>
 <aside><button id="export" class="text">↓ Pobierz kopię danych</button><strong>Wasz budżet, na obu telefonach.</strong><p>Dane odświeżają się automatycznie co 3 sekundy, gdy aplikacja jest otwarta i ma dostęp do internetu. Bez połączenia nowe wpisy nie są zapisywane.</p><details><summary>Jak dodać aplikację do ekranu iPhone’a?</summary><p>Otwórz ten adres w Safari, wybierz Udostępnij, a następnie „Do ekranu początkowego”. Powtórz na drugim telefonie.</p></details></aside><footer>Nasz budżet <span>Więcej miejsca na to, co ważne.</span></footer></main></div>
 <dialog id="settings" aria-labelledby="settingsTitle">
   <div class="dialoghead"><h2 id="settingsTitle">Ustawienia</h2><button id="settingsClose" class="text" type="button" aria-label="Zamknij">✕</button></div>
@@ -140,5 +143,5 @@
     <button id="saveSplit" class="primary">Zapisz podział</button>
   </form>
 </dialog>
-<dialog id="entryDialog"><form id="entryForm"><div class="dialoghead"><h2 id="dialogTitle">Nowy wpis</h2><button type="button" class="text" id="close" aria-label="Zamknij">✕</button></div><label id="kindLabel">Rodzaj<select name="kind"><option value="expense">Wydatek</option><option value="income">Przychód</option><option value="saving">Oszczędności — odkładam</option></select></label><label>Nazwa<input name="name" maxlength="100" placeholder="np. Zakupy spożywcze" required></label><div class="formrow"><label>Kwota (zł)<input name="amount" type="text" inputmode="decimal" placeholder="0,00" required></label><label>Kategoria<select name="category"><option>Zakupy</option><option>Dom i rachunki</option><option>Transport</option><option>Zdrowie</option><option>Przyjemności</option><option>Wynagrodzenie</option><option>Oszczędności</option><option>Inne</option></select></label></div><label id="dateLabel">Data<input name="date" type="date" required></label><div id="ruleFields" hidden><label>Od miesiąca<input name="start" type="month"></label><label>Dzień płatności<input name="day" type="number" min="1" max="31" value="10"></label><p class="hint">Opłata pojawi się w każdym miesiącu od wskazanej daty. W krótszym miesiącu termin przypada na jego ostatni dzień. Nie dodawaj tej samej opłaty ponownie jako wydatku.</p></div><label id="oneOffLabel"><input type="checkbox" name="oneOff"> Wydatek jednorazowy</label><label id="entryNoteLabel">Notatka<textarea name="note" maxlength="500" rows="3" placeholder="np. Do zwrotu"></textarea></label><button id="openReceipt" class="text" type="button" hidden>Zdjęcie paragonu</button><p id="formError" role="alert"></p><button class="primary" id="save">Zapisz wpis</button></form></dialog><div id="toast" role="status" hidden></div>
+<dialog id="entryDialog"><form id="entryForm"><div class="dialoghead"><h2 id="dialogTitle">Nowy wpis</h2><button type="button" class="text" id="close" aria-label="Zamknij">✕</button></div><label id="kindLabel">Rodzaj<select name="kind"><option value="expense">Wydatek</option><option value="income">Przychód</option><option value="saving">Oszczędności — odkładam</option></select></label><label>Nazwa<input name="name" maxlength="100" placeholder="np. Zakupy spożywcze" required></label><div class="formrow"><label>Kwota (zł)<input name="amount" type="text" inputmode="decimal" placeholder="0,00" required></label><label>Kategoria<select name="category"><option>Zakupy</option><option>Dom i rachunki</option><option>Transport</option><option>Zdrowie</option><option>Przyjemności</option><option>Wynagrodzenie</option><option>Oszczędności</option><option>Inne</option></select></label></div><label id="dateLabel">Data<input name="date" type="date" required></label><div id="ruleFields" hidden><label>Od miesiąca<input name="start" type="month"></label><label>Dzień płatności<input name="day" type="number" min="1" max="31" value="10"></label><p class="hint">Opłata pojawi się w każdym miesiącu od wskazanej daty. W krótszym miesiącu termin przypada na jego ostatni dzień. Nie dodawaj tej samej opłaty ponownie jako wydatku.</p></div><label id="oneOffLabel"><input type="checkbox" name="oneOff"> Wydatek jednorazowy</label><label id="entryNoteLabel">Notatka<textarea name="note" maxlength="500" rows="3" placeholder="np. Do zwrotu"></textarea></label><button id="openReceipt" class="text" type="button" hidden>Zdjęcie paragonu</button><button id="openSplit" class="text" type="button" hidden>Podziel wydatek</button><p id="formError" role="alert"></p><button class="primary" id="save">Zapisz wpis</button></form></dialog><div id="toast" role="status" hidden></div>
 <img id="receiptPrint" alt="Paragon"></body></html>
