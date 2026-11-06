@@ -1,3 +1,4 @@
+import { rememberedCategory, rememberCategory } from './merchant-categories.js';
 import { renderCharts } from './charts.js?v=charts3';
 import { initExpenseFilter, filterExpenses, resetExpenseFilter } from './category-filter.js';
 import { initSettings, entryCategories } from './settings.js?v=settings1';
@@ -144,7 +145,11 @@ importFile.onchange = async () => {
       row.querySelector('[name="amount"]').value = (expense.amount / 100).toFixed(2).replace('.', ',');
       const category = row.querySelector('[name="category"]');
       for (const option of categories) category.append(new Option(option));
-      category.value = categories.includes(expense.category) ? expense.category : '';
+      const remembered = rememberedCategory(accountId(), expense.name);
+      const suggested = categories.includes(remembered) ? remembered : expense.category;
+      category.value = categories.includes(suggested) ? suggested : '';
+      row.dataset.merchant = expense.name;
+      row.dataset.suggestedCategory = category.value;
       row.querySelector('.import-duplicate').hidden = !duplicate;
       importRows.append(row);
     }
@@ -178,6 +183,11 @@ importForm.onsubmit = async event => {
     importStatus.textContent = friendlyError(error);
     return;
   }
+  const account = accountId();
+  const corrections = selectedImports().flatMap((row, index) => {
+    const category = entries[index].category;
+    return category !== row.dataset.suggestedCategory ? [[row.dataset.merchant, category]] : [];
+  });
   const button = $('#importSave');
   if (!entries.length || button.dataset.saving) return;
   button.dataset.saving = 'true';
@@ -186,6 +196,7 @@ importForm.onsubmit = async event => {
   importStatus.textContent = 'Zapisywanie wydatków…';
   try {
     await api('import-entries', entries);
+    for (const [merchant, category] of corrections) rememberCategory(account, merchant, category);
     importDialog.close();
     toast('Zapisano wydatki we wspólnym budżecie.');
     await refresh();
