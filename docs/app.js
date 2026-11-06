@@ -1,4 +1,4 @@
-import { rememberedCategory, rememberCategory } from './merchant-categories.js';
+import { rememberedCategory, rememberCategory, importedMerchantName, matchMerchantPattern, saveMerchantPattern } from './merchant-categories.js?v=patterns1';
 import { renderCharts } from './charts.js?v=charts3';
 import { initExpenseFilter, filterExpenses, resetExpenseFilter } from './category-filter.js';
 import { initSettings, entryCategories } from './settings.js?v=settings1';
@@ -140,7 +140,7 @@ importFile.onchange = async () => {
       row.dataset.id = crypto.randomUUID();
       row.querySelector('legend').textContent = expense.blocked ? 'Blokada karty' : 'Płatność kartą';
       row.querySelector('[name="include"]').checked = !duplicate;
-      row.querySelector('[name="name"]').value = expense.name;
+      row.querySelector('[name="name"]').value = importedMerchantName(accountId(), expense.name);
       row.querySelector('[name="date"]').value = expense.date;
       row.querySelector('[name="amount"]').value = (expense.amount / 100).toFixed(2).replace('.', ',');
       const category = row.querySelector('[name="category"]');
@@ -149,6 +149,7 @@ importFile.onchange = async () => {
       const suggested = categories.includes(remembered) ? remembered : expense.category;
       category.value = categories.includes(suggested) ? suggested : '';
       row.dataset.merchant = expense.name;
+      row.querySelector('.import-original').textContent = expense.name;
       row.dataset.suggestedCategory = category.value;
       row.querySelector('.import-duplicate').hidden = !duplicate;
       importRows.append(row);
@@ -166,10 +167,18 @@ importFile.onchange = async () => {
 importForm.onsubmit = async event => {
   event.preventDefault();
   let entries;
+  const patterns = [];
   try {
     entries = selectedImports().map(row => {
       const name = row.querySelector('[name="name"]').value.trim();
       if (!name) throw new Error('Uzupełnij nazwy zaznaczonych wydatków.');
+      const fragment = row.querySelector('[name="merchantPattern"]').value.trim();
+      if (fragment) {
+        if (!/[\p{L}\p{N}]{3}/u.test(fragment) || !matchMerchantPattern(row.dataset.merchant, fragment)) {
+          throw new Error('Wzór musi zawierać co najmniej trzy litery lub cyfry obok siebie i pasować do odczytanej nazwy.');
+        }
+        patterns.push([fragment, name]);
+      }
       return {
         id: row.dataset.id,
         kind: 'expense',
@@ -198,7 +207,12 @@ importForm.onsubmit = async event => {
     await api('import-entries', entries);
     for (const [merchant, category] of corrections) rememberCategory(account, merchant, category);
     importDialog.close();
-    toast('Zapisano wydatki we wspólnym budżecie.');
+    let patternSaved = true;
+    for (const [fragment, name] of patterns) {
+      try { saveMerchantPattern(account, fragment, name); }
+      catch { patternSaved = false; }
+    }
+    toast(patternSaved ? 'Zapisano wydatki we wspólnym budżecie.' : 'Zapisano wydatki. Przeglądarka nie zapisała wszystkich wzorów nazw.');
     await refresh();
   } catch (error) {
     importStatus.textContent = friendlyError(error);

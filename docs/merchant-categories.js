@@ -3,16 +3,57 @@ function merchantKey(name) {
     .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
 
+const knownMerchants = [
+  [/\bmc\s*donald(?:\s*s|s)?\b/u, 'McDonald'],
+  [/\blidl\b/u, 'Lidl'],
+  [/\bbiedronka\b/u, 'Biedronka'],
+  [/\brossmann\b/u, 'Rossmann'],
+  [/\bdm\s+drogerie\b/u, 'dm'],
+];
+
+export function shortMerchantName(name) {
+  const key = merchantKey(name);
+  return knownMerchants.find(([pattern]) => pattern.test(key))?.[1] ?? name;
+}
+
 export function rememberedCategory(account, name) {
   const merchant = merchantKey(name);
   if (!account || !merchant) return null;
-  try { return localStorage.getItem('budget-merchant:' + account + ':' + merchant); }
+  const prefix = 'budget-merchant:' + account + ':';
+  try {
+    return localStorage.getItem(prefix + merchantKey(shortMerchantName(name)))
+      ?? localStorage.getItem(prefix + merchant);
+  }
   catch { return null; }
 }
 
 export function rememberCategory(account, name, category) {
-  const merchant = merchantKey(name);
+  const merchant = merchantKey(shortMerchantName(name));
   if (!account || !merchant || !category) return;
   try { localStorage.setItem('budget-merchant:' + account + ':' + merchant, category); }
   catch { /* Saving the expense still succeeds without local storage. */ }
+}
+
+function merchantPatterns(account) {
+  if (!account) return [];
+  try { return JSON.parse(localStorage.getItem('budget-merchant-patterns:' + account)) ?? []; }
+  catch { return []; }
+}
+
+export function matchMerchantPattern(name, fragment) {
+  return (' ' + merchantKey(name) + ' ').includes(' ' + merchantKey(fragment) + ' ');
+}
+
+export function importedMerchantName(account, name) {
+  return merchantPatterns(account).find(([fragment]) => matchMerchantPattern(name, fragment))?.[1]
+    ?? shortMerchantName(name);
+}
+
+export function saveMerchantPattern(account, fragment, name) {
+  if (!account) return;
+  const key = merchantKey(fragment);
+  const patterns = merchantPatterns(account).filter(([pattern]) => pattern !== key);
+  patterns.unshift([key, name]);
+  patterns.sort((a, b) => b[0].length - a[0].length);
+  localStorage.setItem('budget-merchant-patterns:' + account, JSON.stringify(patterns));
 }
