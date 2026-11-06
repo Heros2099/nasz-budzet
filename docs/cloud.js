@@ -83,6 +83,24 @@ export async function logout() {
   if (access) try { await request('/auth/v1/logout?scope=local', { method: 'POST', token: access }); } catch { /* Local logout always succeeds. */ }
 }
 export async function api(path, data) {
+  if (path === 'search-entries') {
+    const version = generation;
+    const entries = [];
+    const pageSize = 500;
+    for (let offset = 0; ; offset += pageSize) {
+      if (version !== generation) throw invalid('Sesja została zakończona.', 'AUTH');
+      const page = await rest('budget_entries?select=id,kind,name,category,date,amount,note&order=date.desc,id.desc&limit=' + pageSize + '&offset=' + offset);
+      if (version !== generation) throw invalid('Sesja została zakończona.', 'AUTH');
+      entries.push(...page);
+      if (page.length < pageSize) return entries;
+    }
+  }
+  if (path === 'receipt') {
+    const rows = await rest('budget_receipts?select=mime,image_base64&entry_id=eq.' + encodeURIComponent(data));
+    return rows[0] ?? null;
+  }
+  if (path === 'receipt-save') return rest('budget_receipts', { method: 'POST', prefer: 'resolution=merge-duplicates', body: data });
+  if (path === 'receipt-remove') return rest('budget_receipts?entry_id=eq.' + encodeURIComponent(data), { method: 'DELETE' });
   if (path === 'account-categories') {
     const rows = await rest('budget_account_categories?select=names,revision');
     return rows[0] ?? null;

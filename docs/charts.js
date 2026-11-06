@@ -2,7 +2,7 @@ const $ = selector => document.querySelector(selector);
 const percent = new Intl.NumberFormat('pl-PL', { style: 'percent', maximumFractionDigits: 1 });
 const colors = ['#a8c9ed', '#efb2c5', '#b9d6a5', '#f2c29b', '#c8b5e8', '#9ed4ce', '#efd589', '#d6b2a8'];
 
-export function renderCharts(entries, rules, totals, month, today, money, onCategory) {
+export function renderCharts(entries, rules, totals, month, today, money, onCategory, onDay) {
   const outgoing = totals.expense + totals.fixed;
   const turnover = totals.income + outgoing;
   $('#summaryEmpty').hidden = turnover > 0;
@@ -12,7 +12,7 @@ export function renderCharts(entries, rules, totals, month, today, money, onCate
   $('#summaryIncome').textContent = turnover ? money(totals.income) + ' · ' + percent.format(totals.income / turnover) : money(0);
   $('#summaryExpense').textContent = turnover ? money(outgoing) + ' · ' + percent.format(outgoing / turnover) : money(0);
   renderCategories([...entries.filter(entry => entry.kind === 'expense'), ...rules], outgoing, money, onCategory);
-  renderDaily(entries, month, today, money);
+  renderDaily(entries, month, today, money, onDay);
 }
 
 function renderCategories(entries, total, money, onCategory) {
@@ -49,7 +49,7 @@ function renderCategories(entries, total, money, onCategory) {
   $('#categoryChartLegend').replaceChildren(...rows);
 }
 
-function renderDaily(entries, month, today, money) {
+function renderDaily(entries, month, today, money, onDay) {
   const [year, monthNumber] = month.split('-').map(Number);
   const monthDays = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
   const current = today.slice(0, 7);
@@ -81,20 +81,43 @@ function renderDaily(entries, month, today, money) {
     maximum ? 131 - 104 * amount / maximum : 131,
   ]);
   $('#dailyLine').setAttribute('points', points.map(point => point.join(',')).join(' '));
-  const peaks = points.flatMap(([x, y], index) => {
-    const amount = amounts[index];
-    if (!amount || amount <= (amounts[index - 1] || 0) || amount < (amounts[index + 1] || 0)) return [];
-    const marker = document.createElementNS(svg.namespaceURI, 'circle');
-    marker.setAttribute('cx', x);
-    marker.setAttribute('cy', y);
-    marker.setAttribute('r', '3');
-    const label = document.createElementNS(svg.namespaceURI, 'text');
-    label.setAttribute('x', x);
-    label.setAttribute('y', y - 9);
-    label.textContent = money(amount);
-    return [marker, label];
-  });
-  $('#dailyPeaks').replaceChildren(...peaks);
+  const peaks = $('#dailyPeaks');
+  const signature = month + ':' + amounts.join(',');
+  if (peaks.dataset.signature !== signature) {
+    peaks.replaceChildren(...points.flatMap(([x, y], index) => {
+      const amount = amounts[index];
+      if (!amount) return [];
+      const date = month + '-' + String(index + 1).padStart(2, '0');
+      const target = document.createElementNS(svg.namespaceURI, 'g');
+      target.setAttribute('role', 'button');
+      target.setAttribute('tabindex', '0');
+      target.setAttribute('aria-label', date + ', ' + money(amount) + '. Pokaż wydatki');
+      target.onclick = () => onDay(date);
+      target.onkeydown = event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onDay(date);
+        }
+      };
+      for (const [radius, className] of [[15, 'daily-hit'], [3, 'daily-dot']]) {
+        const marker = document.createElementNS(svg.namespaceURI, 'circle');
+        marker.setAttribute('cx', x);
+        marker.setAttribute('cy', y);
+        marker.setAttribute('r', radius);
+        marker.setAttribute('class', className);
+        target.append(marker);
+      }
+      if (amount > (amounts[index - 1] || 0) && amount >= (amounts[index + 1] || 0)) {
+        const label = document.createElementNS(svg.namespaceURI, 'text');
+        label.setAttribute('x', x);
+        label.setAttribute('y', y - 9);
+        label.textContent = money(amount);
+        target.append(label);
+      }
+      return [target];
+    }));
+    peaks.dataset.signature = signature;
+  }
   $('#dailyScale').textContent = !days ? 'Ten miesiąc jeszcze się nie rozpoczął.'
     : maximum ? 'Skala od 0 zł do ' + money(maximum) : 'Brak wydatków w tym okresie.';
   $('#dailyAmounts').replaceChildren(...amounts.map(amount => {

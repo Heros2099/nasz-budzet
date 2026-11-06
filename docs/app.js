@@ -1,13 +1,17 @@
+import { initEntrySearch } from './entry-search.js';
+import { initReceipts } from './receipts.js?v=search1';
 import { monthlyWorkbook } from './month-export.js';
 import { rememberedCategory, rememberCategory, importedMerchantName, matchMerchantPattern, merchantKey, localMerchantPatterns } from './merchant-categories.js?v=shared-patterns1';
-import { renderCharts } from './charts.js?v=expense-tools1';
+import { renderCharts } from './charts.js?v=receipts1';
 import { initExpenseFilter, filterExpenses, resetExpenseFilter } from './category-filter.js?v=day-filter1';
 import { initSettings, entryCategories, syncCategories } from './settings.js?v=account-categories1';
-import { api, login, logout, hasSession, configured, friendlyError, accountId } from './cloud.js?v=account-categories1';
+import { api, login, logout, hasSession, configured, friendlyError, accountId } from './cloud.js?v=search1';
 import { parseAmount } from './budget.js';
 import { readIngScreenshot } from './ing.js';
 const $=s=>document.querySelector(s), money=n=>new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(n/100);
 const localDate=()=>{let d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+const openReceipt = initReceipts(api, friendlyError);
+initEntrySearch(api, money, openReceipt, friendlyError);
 let stateMonth;
 let categoryRefreshAt = 0;
 let state=null,tab='entries',mode='entry',loading=false,queued=false,epoch=0;
@@ -16,7 +20,7 @@ initSettings([...$('#entryForm select[name="category"]').options].map(option => 
 
 function toast(t){$('#toast').textContent=t;$('#toast').hidden=false;setTimeout(()=>$('#toast').hidden=true,4000)}
 initExpenseFilter(render);
-function showLogin() {categoryRefreshAt=0;resetExpenseFilter();epoch++; state=null; $('#login').hidden=false; $('#app').hidden=true; $('#list').replaceChildren(); if ($('#entryDialog').open) $('#entryDialog').close(); if ($('#importDialog').open) $('#importDialog').close(); if ($('#settings').open) $('#settings').close(); if ($('#splitDialog').open) $('#splitDialog').close(); if ($('#categoryDetails').open) $('#categoryDetails').close();}
+function showLogin() {categoryRefreshAt=0;resetExpenseFilter();epoch++; state=null; $('#login').hidden=false; $('#app').hidden=true; $('#list').replaceChildren(); if ($('#receiptDialog').open) $('#receiptDialog').close(); if ($('#entrySearchDialog').open) $('#entrySearchDialog').close(); if ($('#entryDialog').open) $('#entryDialog').close(); if ($('#importDialog').open) $('#importDialog').close(); if ($('#settings').open) $('#settings').close(); if ($('#splitDialog').open) $('#splitDialog').close(); if ($('#categoryDetails').open) $('#categoryDetails').close();}
 async function refresh(){
  if (!hasSession()) {showLogin(); return;}
  if(loading){queued=true;return;}
@@ -42,13 +46,14 @@ async function action(path,data){try{await api(path,data);await refresh()}catch(
 function render(){if(!state)return;const t=state.totals;$('#available').textContent=money(t.available);$('#income').textContent=money(t.income);$('#expense').textContent=money(t.expense+t.fixed);$('#savings').textContent=money(t.savings);
 const chartEntries = $('#excludeOneOff').checked ? state.entries.filter(entry => entry.kind !== 'expense' || !entry.one_off) : state.entries;
 const chartExpense = chartEntries.reduce((sum, entry) => sum + (entry.kind === 'expense' ? entry.amount : 0), 0);
-renderCharts(chartEntries, state.rules, {...t, expense: chartExpense}, stateMonth, localDate(), money, showCategoryDetails);
+renderCharts(chartEntries, state.rules, {...t, expense: chartExpense}, stateMonth, localDate(), money, showCategoryDetails, showDayDetails);
 
 const rules=tab==='rules';$('#sectionTitle').textContent=rules?'Wasze stałe opłaty':tab==='savings'?'Odłożone oszczędności':'Wszystkie wpisy';$('#sectionSubtitle').textContent=rules?'Uwzględniane co miesiąc, bez ponownego wpisywania.':tab==='savings'?'Wpłaty w tym miesiącu — bez łącznego salda oszczędności.':'Wasze codzienne finanse w jednym miejscu.';$('#add').textContent=rules?'＋ Stała opłata':'＋ Dodaj wpis';
 const items=filterExpenses(rules?state.rules:state.entries.filter(e=>tab!=='savings'||e.kind==='saving'),tab==='entries',money,stateMonth);const list=$('#list');list.replaceChildren();
 if(!items.length && !$('#expenseFilterTotal').hidden){list.append(el('p','empty','Brak wpisów pasujących do filtrów.'));return}
 if(!items.length){const empty=el('div','empty');empty.append(el('b','',rules?'↻':'＋'),el('strong','',rules?'Dodajcie pierwszą stałą opłatę':'Tu zaczyna się Wasz budżet'),el('p','',rules?'Czynsz, internet, raty — wpiszcie je tylko raz.':'Dodajcie przychód, wydatek lub odłożoną kwotę.'));list.append(empty);return}
-for(const e of items){const row=el('div','row');row.append(el('div','symbol',rules?'↻':e.kind==='income'?'↗':e.kind==='saving'?'◒':'↘'));const info=el('div','info');info.append(el('strong','',e.name),el('small','',rules?`${e.category} · termin: ${e.due}. dzień · ${e.paid?'opłacone':'do opłacenia'}`:`${e.category} · ${e.date.split('-').reverse().join('.')}${e.one_off ? ' · Jednorazowy' : ''}`));row.append(info,el('div','amount'+(e.kind==='income'?' positive':''),(e.kind==='income'?'+':'−')+money(e.amount)));
+for(const e of items){const row=el('div','row');row.append(el('div','symbol',rules?'↻':e.kind==='income'?'↗':e.kind==='saving'?'◒':'↘'));const info=el('div','info');info.append(el('strong','',e.name),el('small','',rules?`${e.category} · termin: ${e.due}. dzień · ${e.paid?'opłacone':'do opłacenia'}`:`${e.category} · ${e.date.split('-').reverse().join('.')}${e.one_off ? ' · Jednorazowy' : ''}`));if (!rules && e.note) info.append(el('small', '', e.note));
+row.append(info,el('div','amount'+(e.kind==='income'?' positive':''),(e.kind==='income'?'+':'−')+money(e.amount)));
 if(rules){const pay=el('button','',e.paid?'Cofnij':'Opłacone');pay.onclick=()=>action('paid',{id:e.id,month:$('#month').value,paid:!e.paid});row.append(pay);const stop=el('button','','×');stop.setAttribute('aria-label','Zakończ opłatę '+e.name);stop.onclick=()=>{if(confirm('Zakończyć opłatę „'+e.name+'” od wybranego miesiąca? Wcześniejsze miesiące pozostaną bez zmian.'))action('stop-rule',{id:e.id,month:$('#month').value})};row.append(stop)}else{const edit=el('button','','Edytuj');edit.setAttribute('aria-label','Edytuj wpis '+e.name);edit.onclick=()=>openForm(false,e);row.append(edit);
 if(e.kind==='expense'){
   const split=el('button','','Podziel');
@@ -57,7 +62,7 @@ if(e.kind==='expense'){
 }
 const remove=el('button','','×');remove.setAttribute('aria-label','Usuń wpis '+e.name);remove.onclick=()=>{if(confirm('Usunąć wpis „'+e.name+'”?'))action('delete-entry',{id:e.id})};row.append(remove)}list.append(row)}}
 $('#loginForm').onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector('button');b.disabled=true;$('#loginError').textContent='';try{await login($('#email').value.trim(),$('#password').value);$('#password').value='';await refresh()}catch(err){$('#loginError').textContent=friendlyError(err)}finally{b.disabled=false}};
-$('#logout').onclick=async()=>{try{showLogin();await logout()}catch(e){toast(friendlyError(e))}};
+$('#logout').onclick=async()=>{if(!confirm('Czy na pewno chcesz się wylogować?'))return;try{showLogin();await logout()}catch(e){toast(friendlyError(e))}};
 function openForm(rule=false, entry=null){mode=rule?'rule':entry?'edit-entry':'entry';const f=$('#entryForm');f.reset();f.dataset.pendingId=entry?.id ?? crypto.randomUUID();f.elements.date.value=$('#month').value===localDate().slice(0,7)?localDate():$('#month').value+'-01';f.elements.start.value=$('#month').value;f.elements.kind.value=tab==='savings'?'saving':'expense';const names=entryCategories();
 const preferred=rule?'Dom i rachunki':tab==='savings'?'Oszczędności':'Zakupy';
 const category=entry?.category || (names.includes(preferred)?preferred:names[0]);
@@ -67,12 +72,18 @@ f.elements.category.value=category;$('#kindLabel').hidden=rule;$('#dateLabel').h
   f.elements.amount.value=(entry.amount/100).toFixed(2).replace('.',',');
 }
 f.elements.oneOff.checked=Boolean(entry?.one_off);
-const updateOneOff=()=>{ $('#oneOffLabel').hidden=rule || f.elements.kind.value!=='expense'; };
+f.elements.note.value = entry?.note ?? '';
+$('#openReceipt').onclick = () => openReceipt(entry.id);
+const updateOneOff=()=>{
+  const expense = !rule && f.elements.kind.value === 'expense';
+  $('#oneOffLabel').hidden = $('#entryNoteLabel').hidden = !expense;
+  $('#openReceipt').hidden = !expense || entry?.kind !== 'expense';
+};
 f.elements.kind.onchange=updateOneOff;
 updateOneOff();
 $('#dialogTitle').textContent=rule?'Nowa stała opłata':entry?'Edytuj wpis':'Nowy wpis';$('#formError').textContent='';$('#entryDialog').showModal()}
 $('#add').onclick=()=>openForm(tab==='rules');$('#addMain').onclick=()=>openForm();$('#close').onclick=()=>$('#entryDialog').close();
-$('#entryForm').onsubmit=async e=>{e.preventDefault();const f=e.target;let amount;try{amount=parseAmount(f.elements.amount.value)}catch(err){$('#formError').textContent=friendlyError(err);return}const data={id:f.dataset.pendingId,name:f.elements.name.value.trim(),amount,category:f.elements.category.value};if(mode==='rule'){data.start=f.elements.start.value;data.day=Number(f.elements.day.value)}else{data.kind=f.elements.kind.value;data.date=f.elements.date.value;data.one_off=data.kind==='expense' && f.elements.oneOff.checked}$('#save').disabled=true;try{await api(mode,data);$('#entryDialog').close();toast('Zapisano we wspólnym budżecie.');await refresh()}catch(err){$('#formError').textContent=friendlyError(err)}finally{$('#save').disabled=false}};
+$('#entryForm').onsubmit=async e=>{e.preventDefault();const f=e.target;let amount;try{amount=parseAmount(f.elements.amount.value)}catch(err){$('#formError').textContent=friendlyError(err);return}const data={id:f.dataset.pendingId,name:f.elements.name.value.trim(),amount,category:f.elements.category.value};if(mode==='rule'){data.start=f.elements.start.value;data.day=Number(f.elements.day.value)}else{data.kind=f.elements.kind.value;data.date=f.elements.date.value;data.one_off=data.kind==='expense' && f.elements.oneOff.checked;data.note=f.elements.note.value.trim()}$('#save').disabled=true;try{await api(mode,data);$('#entryDialog').close();toast('Zapisano we wspólnym budżecie.');await refresh()}catch(err){$('#formError').textContent=friendlyError(err)}finally{$('#save').disabled=false}};
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));render()});
 $('#month').onchange=()=>{if($('#month').value)refresh()};function shift(n){const [y,m]=$('#month').value.split('-').map(Number);const d=new Date(y,m-1+n,1);$('#month').value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;refresh()}$('#prev').onclick=()=>shift(-1);$('#next').onclick=()=>shift(1);
 setInterval(()=>{if(!document.hidden&&hasSession()&&state)refresh()},3000);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state)refresh()});window.addEventListener('online',()=>{if(hasSession())refresh()});
@@ -323,6 +334,13 @@ function patternEditor(pattern, account) {
 $('#excludeOneOff').onchange = render;
 $('#closeCategoryDetails').onclick = () => $('#categoryDetails').close();
 
+function showDayDetails(date) {
+  if (!state || date.slice(0, 7) !== stateMonth) return;
+  const excludeOneOff = $('#excludeOneOff').checked;
+  const entries = state.entries.filter(entry => entry.kind === 'expense' && entry.date === date && (!excludeOneOff || !entry.one_off));
+  showCategoryDetails('Wydatki z ' + date.split('-').reverse().join('.'), entries);
+}
+
 function showCategoryDetails(category, entries) {
   $('#categoryDetailsTitle').textContent = category;
   $('#categoryDetailRows').replaceChildren(...entries.map(entry => {
@@ -330,6 +348,7 @@ function showCategoryDetails(category, entries) {
     const date = entry.date || `${entry.due}. dzień · Stała opłata`;
     const info = el('div', 'info');
     info.append(el('strong', '', entry.name), el('small', '', date));
+    if (entry.note) info.append(el('small', '', entry.note));
     row.append(info, el('div', 'amount', money(entry.amount)));
     return row;
   }));

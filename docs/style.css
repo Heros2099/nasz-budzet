@@ -177,3 +177,23 @@ nav button.active { box-shadow: 0 2px var(--link); }
 .chart-category { text-align: left; text-decoration: underline; padding-inline: 4px; color: inherit; }
 .split-part { display: grid; grid-template-columns: 1fr 1fr auto; align-items: end; gap: 8px; margin-bottom: 8px; }
 .split-part label { margin: 0; min-width: 0; }
+
+#dailyPeaks [role="button"] { cursor: pointer; }
+.daily-hit { fill: transparent; }
+#dailyPeaks [role="button"]:focus .daily-dot { stroke: var(--strong); stroke-width: 3px; }
+#entryNoteLabel textarea {
+  display: block; width: 100%; margin-top: 7px; padding: 10px; border: 1px solid var(--line);
+  border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; resize: vertical;
+}
+#receiptImage { display: block; max-width: 100%; max-height: 55vh; margin: 12px auto; object-fit: contain; }
+
+#entrySearchOpen { padding-inline: 8px; vertical-align: middle; }
+#entrySearchOpen svg { display: block; }
+.search-result { padding: 12px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.search-result p { margin: 3px 0; }
+#receiptPrint { display: none; }
+@media print {
+  body:has(#receiptPrint[src]) > :not(#receiptPrint) { display: none !important; }
+  body:has(#receiptPrint[src]) { background: white; }
+  #receiptPrint[src] { display: block; max-width: 100%; max-height: 95vh; margin: 0 auto; }
+}
