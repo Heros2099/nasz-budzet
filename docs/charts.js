@@ -62,7 +62,9 @@ function renderDaily(entries, month, today, money, onDay) {
     }
   }
   const maximum = Math.max(0, ...amounts);
-  const width = Math.max(320, monthDays * 36 + 50);
+  const labelLength = Math.max(0, ...amounts.filter(Boolean).map(amount => money(amount).length));
+  const spacing = Math.max(36, labelLength * 7 + 8);
+  const width = 96 + spacing * (monthDays - 1);
   const svg = $('#dailyChart');
   $('#dailyPlot').hidden = false;
   $('#dailyPlotInner').style.minWidth = width + 'px';
@@ -107,13 +109,11 @@ function renderDaily(entries, month, today, money, onDay) {
         marker.setAttribute('class', className);
         target.append(marker);
       }
-      if (amount > (amounts[index - 1] || 0) && amount >= (amounts[index + 1] || 0)) {
-        const label = document.createElementNS(svg.namespaceURI, 'text');
-        label.setAttribute('x', x);
-        label.setAttribute('y', y - 9);
-        label.textContent = money(amount);
-        target.append(label);
-      }
+      const label = document.createElementNS(svg.namespaceURI, 'text');
+      label.setAttribute('x', x);
+      label.setAttribute('y', y - 9);
+      label.textContent = money(amount);
+      target.append(label);
       return [target];
     }));
     peaks.dataset.signature = signature;

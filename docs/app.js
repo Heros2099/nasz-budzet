@@ -2,7 +2,7 @@ import { initEntrySearch } from './entry-search.js';
 import { initReceipts } from './receipts.js?v=search1';
 import { monthlyWorkbook } from './month-export.js';
 import { rememberedCategory, rememberCategory, importedMerchantName, matchMerchantPattern, merchantKey, localMerchantPatterns } from './merchant-categories.js?v=shared-patterns1';
-import { renderCharts } from './charts.js?v=receipts1';
+import { renderCharts } from './charts.js?v=daily-labels1';
 import { initExpenseFilter, filterExpenses, resetExpenseFilter } from './category-filter.js?v=day-filter1';
 import { initSettings, entryCategories, syncCategories } from './settings.js?v=account-categories1';
 import { api, login, logout, hasSession, configured, friendlyError, accountId } from './cloud.js?v=search1';
